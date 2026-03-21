@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sirio TPV</title>
+  <link rel="stylesheet" href="styles/main.css"/>
+</head>
+<body>
+  <div id="app">
+    <!-- Titlebar -->
+    <div id="titlebar">
+      <div class="titlebar-logo">
+        <span class="logo-mark">◈</span>
+        <span class="logo-text">SIRIO</span>
+        <span class="logo-sub">TPV</span>
+      </div>
+      <div class="titlebar-status" id="verifactu-badge">
+        <span class="status-dot"></span>
+        <span class="status-text">VeriFactu</span>
+      </div>
+      <div id="tb-negocio" style="margin-left:16px;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;-webkit-app-region:drag"></div>
+      <div class="titlebar-controls">
+        <button class="ctrl-btn" onclick="window.sirio.window.minimize()">─</button>
+        <button class="ctrl-btn" onclick="window.sirio.window.maximize()">□</button>
+        <button class="ctrl-btn ctrl-close" onclick="window.sirio.window.close()">✕</button>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <nav id="sidebar">
+      <button class="nav-btn active" data-page="negocio"    onclick="App.navigate('negocio')">
+        <span class="nav-icon" id="ico-negocio">◉</span>
+        <span class="nav-label" id="lbl-negocio">Inicio</span>
+      </button>
+      <button class="nav-btn" data-page="tpv"       onclick="App.navigate('tpv')"       id="nav-tpv">
+        <span class="nav-icon">⊞</span>
+        <span class="nav-label" id="lbl-tpv">TPV</span>
+      </button>
+      <button class="nav-btn" data-page="facturas"  onclick="App.navigate('facturas')"  id="nav-facturas">
+        <span class="nav-icon">◧</span>
+        <span class="nav-label" id="lbl-facturas">Facturas</span>
+      </button>
+      <button class="nav-btn" data-page="clientes"  onclick="App.navigate('clientes')"  id="nav-clientes">
+        <span class="nav-icon">◉</span>
+        <span class="nav-label" id="lbl-clientes">Clientes</span>
+      </button>
+      <button class="nav-btn" data-page="productos" onclick="App.navigate('productos')" id="nav-productos">
+        <span class="nav-icon">◈</span>
+        <span class="nav-label" id="lbl-productos">Productos</span>
+      </button>
+      <button class="nav-btn" data-page="inventario" onclick="App.navigate('inventario')" id="nav-inventario" style="display:none">
+        <span class="nav-icon">▦</span>
+        <span class="nav-label" id="lbl-inventario">Stock</span>
+      </button>
+      <button class="nav-btn" data-page="verifactu" onclick="App.navigate('verifactu')" id="nav-verifactu" style="display:none">
+        <span class="nav-icon">◎</span>
+        <span class="nav-label">VeriFactu</span>
+      </button>
+      <button class="nav-btn" data-page="config"    onclick="App.navigate('config')">
+        <span class="nav-icon">◌</span>
+        <span class="nav-label">Config</span>
+      </button>
+    </nav>
+
+    <!-- Content -->
+    <main id="content">
+      <div id="page-negocio"    class="page active"></div>
+      <div id="page-tpv"        class="page"></div>
+      <div id="page-facturas"   class="page"></div>
+      <div id="page-clientes"   class="page"></div>
+      <div id="page-productos"  class="page"></div>
+      <div id="page-inventario" class="page"></div>
+      <div id="page-verifactu"  class="page"></div>
+      <div id="page-config"     class="page"></div>
+      <div id="page-admin"      class="page"></div>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

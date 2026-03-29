@@ -1,1 +1,0 @@
-if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/Siriv2/sw.js', { scope: '/Siriv2/' })})}

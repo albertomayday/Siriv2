@@ -2,7 +2,7 @@
   "name": "Sirio TPV",
   "short_name": "Sirio",
   "description": "Gestor TPV con VeriFactu para cumplimiento AEAT",
-  "start_url": "/",
+  "start_url": "/Siriv2/",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#0a0a0f",

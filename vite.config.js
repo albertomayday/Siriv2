@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   root: 'src/renderer',
-  base: '/Siriv2/',
+  base: '/',
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',

@@ -30,10 +30,14 @@ const App = {
     if (productos.length > 0) return
 
     // Agregar datos dummy
-    await db.put('productos', { id: '1', nombre: 'Producto 1', precio: 10.0, categoria_id: '1' })
-    await db.put('productos', { id: '2', nombre: 'Producto 2', precio: 15.0, categoria_id: '1' })
-    await db.put('categorias', { id: '1', nombre: 'Categoría 1' })
-    await db.put('clientes', { id: '1', nombre: 'Cliente 1', nif: '12345678A' })
+    await db.put('categorias', { id: '1', nombre: 'Bebidas' })
+    await db.put('categorias', { id: '2', nombre: 'Comida' })
+    await db.put('productos', { id: '1', nombre: 'Coca-Cola', precio: 2.0, categoria_id: '1' })
+    await db.put('productos', { id: '2', nombre: 'Hamburguesa', precio: 8.5, categoria_id: '2' })
+    await db.put('productos', { id: '3', nombre: 'Patatas Fritas', precio: 3.5, categoria_id: '2' })
+    await db.put('productos', { id: '4', nombre: 'Agua', precio: 1.5, categoria_id: '1' })
+    await db.put('clientes', { id: '1', nombre: 'Juan Pérez', nif: '12345678A' })
+    await db.put('clientes', { id: '2', nombre: 'María García', nif: '87654321B' })
     await db.put('config', { clave: 'iva', valor: '21' })
   },
 
@@ -263,24 +267,389 @@ App.renderNegocio = async function() {
 }
 
 // Stubs básicos para primera versión
-App.renderTPV = function() {
+App.renderTPV = async function() {
   const el = document.getElementById('page-tpv')
-  el.innerHTML = `<h1 class="page-title"><span class="title-icon">⊞</span> ${this.T('tpv')}</h1><p>Página en desarrollo</p>`
+  const productos = await db.getAll('productos')
+  const categorias = await db.getAll('categorias')
+
+  el.innerHTML = `
+    <h1 class="page-title"><span class="title-icon">⊞</span> ${this.T('tpv')}</h1>
+    <div class="tpv-grid">
+      <div style="display:flex;flex-direction:column;gap:12px;overflow:hidden">
+        <div class="cat-tabs" id="cat-tabs">
+          <button class="cat-tab active" onclick="App.filtrarProductos('')">Todos</button>
+          ${categorias.map(c => `<button class="cat-tab" onclick="App.filtrarProductos('${c.id}')">${this.escH(c.nombre)}</button>`).join('')}
+        </div>
+        <div class="productos-grid" id="productos-grid">
+          ${productos.map(p => `
+            <button class="producto-card" onclick="App.agregarProducto('${p.id}')">
+              <div class="producto-nombre">${this.escH(p.nombre)}</div>
+              <div class="producto-precio">${this.fmt(p.precio)}</div>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="ticket-panel">
+        <div class="ticket-header">◧ ${this.T('ticket')} actual</div>
+        <div class="ticket-lineas" id="ticket-lineas">
+          <div class="empty-state"><div class="empty-icon">◈</div><div class="empty-text">Añade productos</div></div>
+        </div>
+        <div class="ticket-totales">
+          <div class="total-row"><span>Base imponible</span><span id="t-base">0,00 €</span></div>
+          <div class="total-row"><span>IVA (21%)</span><span id="t-iva">0,00 €</span></div>
+          <div class="total-row total-final"><span>TOTAL</span><span id="t-total">0,00 €</span></div>
+        </div>
+        <div class="ticket-actions">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="btn btn-secondary" onclick="App.limpiarTicket()">Limpiar</button>
+            <button class="btn btn-success" onclick="App.cobrarTicket()">Cobrar</button>
+          </div>
+          <button class="btn btn-primary w-full" onclick="App.emitirFactura()">Emitir ${this.T('factura')}</button>
+        </div>
+      </div>
+    </div>
+  `
+  this.ticket = [] // Array de lineas: {producto, cantidad, precio}
+  this.actualizarTicket()
 }
 
-App.renderFacturas = function() {
+App.filtrarProductos = function(catId) {
+  document.querySelectorAll('.cat-tab').forEach(btn => btn.classList.remove('active'))
+  event.target.classList.add('active')
+  // Implementar filtro
+}
+
+App.agregarProducto = async function(id) {
+  const producto = await db.get('productos', id)
+  const existente = this.ticket.find(l => l.producto.id === id)
+  if (existente) {
+    existente.cantidad++
+  } else {
+    this.ticket.push({ producto, cantidad: 1, precio: producto.precio })
+  }
+  this.actualizarTicket()
+}
+
+App.actualizarTicket = function() {
+  const lineasEl = document.getElementById('ticket-lineas')
+  const baseEl = document.getElementById('t-base')
+  const ivaEl = document.getElementById('t-iva')
+  const totalEl = document.getElementById('t-total')
+
+  if (this.ticket.length === 0) {
+    lineasEl.innerHTML = '<div class="empty-state"><div class="empty-icon">◈</div><div class="empty-text">Añade productos</div></div>'
+    baseEl.textContent = '0,00 €'
+    ivaEl.textContent = '0,00 €'
+    totalEl.textContent = '0,00 €'
+    return
+  }
+
+  lineasEl.innerHTML = this.ticket.map((l, i) => `
+    <div class="ticket-linea">
+      <div class="linea-info">
+        <div class="linea-nombre">${this.escH(l.producto.nombre)}</div>
+        <div class="linea-precio">${this.fmt(l.precio)}</div>
+      </div>
+      <div class="linea-cantidad">
+        <button onclick="App.cambiarCantidad(${i}, -1)">-</button>
+        <span>${l.cantidad}</span>
+        <button onclick="App.cambiarCantidad(${i}, 1)">+</button>
+      </div>
+      <div class="linea-total">${this.fmt(l.cantidad * l.precio)}</div>
+      <button class="linea-remove" onclick="App.removerLinea(${i})">×</button>
+    </div>
+  `).join('')
+
+  const base = this.ticket.reduce((s, l) => s + (l.cantidad * l.precio), 0)
+  const iva = base * 0.21
+  const total = base + iva
+
+  baseEl.textContent = this.fmt(base)
+  ivaEl.textContent = this.fmt(iva)
+  totalEl.textContent = this.fmt(total)
+}
+
+App.cambiarCantidad = function(index, delta) {
+  this.ticket[index].cantidad += delta
+  if (this.ticket[index].cantidad <= 0) {
+    this.ticket.splice(index, 1)
+  }
+  this.actualizarTicket()
+}
+
+App.removerLinea = function(index) {
+  this.ticket.splice(index, 1)
+  this.actualizarTicket()
+}
+
+App.limpiarTicket = function() {
+  this.ticket = []
+  this.actualizarTicket()
+}
+
+App.cobrarTicket = function() {
+  if (this.ticket.length === 0) return
+  alert('Ticket cobrado! (Funcionalidad básica)')
+  this.limpiarTicket()
+}
+
+App.emitirFactura = function() {
+  alert('Factura emitida! (Funcionalidad básica)')
+}
+
+App.renderFacturas = async function() {
   const el = document.getElementById('page-facturas')
-  el.innerHTML = `<h1 class="page-title"><span class="title-icon">◧</span> ${this.T('factura')}s</h1><p>Página en desarrollo</p>`
+  // Dummy facturas
+  const facturas = [
+    { id: '1', numero_completo: 'F2024-001', fecha: '2024-03-29', cliente_nombre: 'Juan Pérez', base_imponible: 10.5, cuota_iva: 2.2, total: 12.7, estado: 'emitida', verifactu_estado: 'pendiente' }
+  ]
+
+  el.innerHTML = `
+    <div class="flex items-center justify-between">
+      <h1 class="page-title"><span class="title-icon">◧</span> ${this.T('factura')}s emitidas</h1>
+      <div class="flex gap-8">
+        <button class="btn btn-secondary btn-sm" onclick="App.exportarFacturas()">Exportar CSV</button>
+        <button class="btn btn-secondary btn-sm" onclick="App.renderFacturas()">↻ Actualizar</button>
+      </div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Total facturado</div><div class="kpi-value">${this.fmt(facturas.reduce((s, f) => s + f.total, 0))}</div></div>
+      <div class="kpi-card"><div class="kpi-label">${this.T('factura')}s emitidas</div><div class="kpi-value">${facturas.filter(f=>f.estado!=='anulada').length}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Pendientes VeriFactu</div><div class="kpi-value" style="color:var(--amber)">${facturas.filter(f => f.verifactu_estado === 'pendiente').length}</div></div>
+    </div>
+    <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0">
+      <div style="flex:1;overflow:auto">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Número</th><th>Fecha</th><th>${this.T('cliente')}</th><th>Base</th><th>IVA</th><th>Total</th><th>Estado</th><th>VeriFactu</th><th></th></tr></thead>
+            <tbody>
+              ${facturas.length === 0
+                ? `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted)">Sin ${this.T('factura')}s</td></tr>`
+                : facturas.map(f => `
+                  <tr>
+                    <td class="text-mono">${f.numero_completo}</td>
+                    <td>${this.fmtDate(f.fecha)}</td>
+                    <td>${this.escH(f.cliente_nombre)}</td>
+                    <td class="text-mono">${this.fmt(f.base_imponible)}</td>
+                    <td class="text-mono">${this.fmt(f.cuota_iva)}</td>
+                    <td class="text-mono" style="font-weight:600">${this.fmt(f.total)}</td>
+                    <td><span class="badge badge-success">${f.estado}</span></td>
+                    <td><span class="badge badge-warning">${f.verifactu_estado}</span></td>
+                    <td>${f.verifactu_estado==='pendiente' ? `<button class="btn btn-secondary btn-sm" onclick="App.enviarVF('${f.id}')">Enviar</button>` : ''}</td>
+                  </tr>`).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `
 }
 
-App.renderClientes = function() {
+App.exportarFacturas = function() {
+  alert('Exportar CSV (Funcionalidad básica)')
+}
+
+App.enviarVF = function(id) {
+  alert('Enviar a VeriFactu (Funcionalidad básica)')
+}
+
+App.renderClientes = async function() {
   const el = document.getElementById('page-clientes')
-  el.innerHTML = `<h1 class="page-title"><span class="title-icon">◉</span> ${this.T('cliente')}s</h1><p>Página en desarrollo</p>`
+  const clientes = await db.getAll('clientes')
+
+  el.innerHTML = `
+    <div class="flex items-center justify-between">
+      <h1 class="page-title"><span class="title-icon">◉</span> ${this.T('cliente')}s</h1>
+      <button class="btn btn-primary btn-sm" onclick="App.showClienteForm()">+ Nuevo ${this.T('cliente')}</button>
+    </div>
+
+    <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0">
+      <div style="flex:1;overflow:auto">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nombre</th><th>NIF</th><th>Acciones</th></tr></thead>
+            <tbody>
+              ${clientes.length === 0
+                ? `<tr><td colspan="3" style="text-align:center;padding:40px;color:var(--text-muted)">Sin ${this.T('cliente')}s</td></tr>`
+                : clientes.map(c => `
+                  <tr>
+                    <td>${this.escH(c.nombre)}</td>
+                    <td class="text-mono">${this.escH(c.nif || '-')}</td>
+                    <td>
+                      <button class="btn btn-secondary btn-sm" onclick="App.editCliente('${c.id}')">Editar</button>
+                      <button class="btn btn-danger btn-sm" onclick="App.deleteCliente('${c.id}')">Eliminar</button>
+                    </td>
+                  </tr>`).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `
 }
 
-App.renderProductos = function() {
+App.showClienteForm = function(cliente = null) {
+  const isEdit = !!cliente
+  const form = `
+    <div class="modal-overlay" onclick="this.remove()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3>${isEdit ? 'Editar' : 'Nuevo'} ${this.T('cliente')}</h3>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+        </div>
+        <form onsubmit="App.saveCliente(event, '${cliente?.id || ''}')">
+          <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" name="nombre" value="${cliente?.nombre || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>NIF</label>
+            <input type="text" name="nif" value="${cliente?.nif || ''}">
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `
+  document.body.insertAdjacentHTML('beforeend', form)
+}
+
+App.saveCliente = async function(event, id) {
+  event.preventDefault()
+  const form = event.target
+  const data = {
+    nombre: form.nombre.value,
+    nif: form.nif.value
+  }
+  if (id) {
+    data.id = id
+  } else {
+    data.id = Date.now().toString()
+  }
+  await db.put('clientes', data)
+  event.target.closest('.modal-overlay').remove()
+  this.renderClientes()
+}
+
+App.editCliente = async function(id) {
+  const cliente = await db.get('clientes', id)
+  this.showClienteForm(cliente)
+}
+
+App.deleteCliente = async function(id) {
+  if (confirm('¿Eliminar cliente?')) {
+    await db.delete('clientes', id)
+    this.renderClientes()
+  }
+}
+
+App.renderProductos = async function() {
   const el = document.getElementById('page-productos')
-  el.innerHTML = `<h1 class="page-title"><span class="title-icon">◈</span> ${this.T('producto')}s</h1><p>Página en desarrollo</p>`
+  const productos = await db.getAll('productos')
+  const categorias = await db.getAll('categorias')
+
+  el.innerHTML = `
+    <div class="flex items-center justify-between">
+      <h1 class="page-title"><span class="title-icon">◈</span> ${this.T('producto')}s</h1>
+      <button class="btn btn-primary btn-sm" onclick="App.showProductoForm()">+ Nuevo ${this.T('producto')}</button>
+    </div>
+
+    <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0">
+      <div style="flex:1;overflow:auto">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acciones</th></tr></thead>
+            <tbody>
+              ${productos.length === 0
+                ? `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted)">Sin ${this.T('producto')}s</td></tr>`
+                : productos.map(p => `
+                  <tr>
+                    <td>${this.escH(p.nombre)}</td>
+                    <td>${categorias.find(c => c.id === p.categoria_id)?.nombre || '-'}</td>
+                    <td class="text-mono">${this.fmt(p.precio)}</td>
+                    <td>
+                      <button class="btn btn-secondary btn-sm" onclick="App.editProducto('${p.id}')">Editar</button>
+                      <button class="btn btn-danger btn-sm" onclick="App.deleteProducto('${p.id}')">Eliminar</button>
+                    </td>
+                  </tr>`).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+App.showProductoForm = function(producto = null) {
+  const isEdit = !!producto
+  const form = `
+    <div class="modal-overlay" onclick="this.remove()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3>${isEdit ? 'Editar' : 'Nuevo'} ${this.T('producto')}</h3>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+        </div>
+        <form onsubmit="App.saveProducto(event, '${producto?.id || ''}')">
+          <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" name="nombre" value="${producto?.nombre || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Precio</label>
+            <input type="number" step="0.01" name="precio" value="${producto?.precio || ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Categoría</label>
+            <select name="categoria_id">
+              <option value="">Sin categoría</option>
+              ${(await db.getAll('categorias')).map(c => `<option value="${c.id}" ${producto?.categoria_id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `
+  document.body.insertAdjacentHTML('beforeend', form)
+}
+
+App.saveProducto = async function(event, id) {
+  event.preventDefault()
+  const form = event.target
+  const data = {
+    nombre: form.nombre.value,
+    precio: parseFloat(form.precio.value),
+    categoria_id: form.categoria_id.value || null
+  }
+  if (id) {
+    data.id = id
+  } else {
+    data.id = Date.now().toString() // Simple ID
+  }
+  await db.put('productos', data)
+  event.target.closest('.modal-overlay').remove()
+  this.renderProductos()
+}
+
+App.editProducto = async function(id) {
+  const producto = await db.get('productos', id)
+  this.showProductoForm(producto)
+}
+
+App.deleteProducto = async function(id) {
+  if (confirm('¿Eliminar producto?')) {
+    await db.delete('productos', id)
+    this.renderProductos()
+  }
 }
 
 App.renderInventario = function() {

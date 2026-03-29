@@ -40,7 +40,8 @@ npm run preview
 
 ### Primera versión PWA
 - Abre http://localhost:5173 en un navegador moderno.
-- La app se cargará como PWA básica con IndexedDB.
+- La app se cargará como PWA con IndexedDB.
+- **Módulos funcionales**: Inicio (KPIs), TPV (productos, ticket), Productos (CRUD), Clientes (CRUD), Facturas (lista dummy).
 - Para instalar: Busca el botón "Instalar app" en la barra de direcciones.
 
 ## Despliegue (Deploy)

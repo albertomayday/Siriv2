@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -23,9 +25,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          cname: sirio-pwa.pages.dev  # Opcional, si tienes un dominio custom
+      - name: Deploy to branch
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout pwa-no-electron
+          rm -rf index.html styles main.css app.js database.js manifest.json sw.js favicon.ico icon-192.png icon-512.png
+          cp -r dist/* .
+          rm -rf dist
+          git add .
+          git commit -m "Deploy PWA to branch" || echo "No changes to commit"
+          git push origin pwa-no-electron

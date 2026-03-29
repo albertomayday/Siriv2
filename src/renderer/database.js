@@ -50,6 +50,26 @@ class Database {
       request.onerror = () => reject(request.error)
     })
   }
+
+  async get(storeName, key) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([storeName], 'readonly')
+      const store = transaction.objectStore(storeName)
+      const request = store.get(key)
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+  }
+
+  async delete(storeName, key) {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([storeName], 'readwrite')
+      const store = transaction.objectStore(storeName)
+      const request = store.delete(key)
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+  }
 }
 
 const db = new Database()

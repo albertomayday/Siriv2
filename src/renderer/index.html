@@ -4,29 +4,13 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sirio TPV</title>
+  <link rel="icon" href="./favicon.ico" type="image/x-icon"/>
   <link rel="stylesheet" href="styles/main.css"/>
+  <link rel="manifest" href="./manifest.json"/>
+  <meta name="theme-color" content="#0a0a0f"/>
 </head>
 <body>
   <div id="app">
-    <!-- Titlebar -->
-    <div id="titlebar">
-      <div class="titlebar-logo">
-        <span class="logo-mark">◈</span>
-        <span class="logo-text">SIRIO</span>
-        <span class="logo-sub">TPV</span>
-      </div>
-      <div class="titlebar-status" id="verifactu-badge">
-        <span class="status-dot"></span>
-        <span class="status-text">VeriFactu</span>
-      </div>
-      <div id="tb-negocio" style="margin-left:16px;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;-webkit-app-region:drag"></div>
-      <div class="titlebar-controls">
-        <button class="ctrl-btn" onclick="window.sirio.window.minimize()">─</button>
-        <button class="ctrl-btn" onclick="window.sirio.window.maximize()">□</button>
-        <button class="ctrl-btn ctrl-close" onclick="window.sirio.window.close()">✕</button>
-      </div>
-    </div>
-
     <!-- Sidebar -->
     <nav id="sidebar">
       <button class="nav-btn active" data-page="negocio"    onclick="App.navigate('negocio')">

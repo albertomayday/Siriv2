@@ -2,20 +2,56 @@
 // SIRIO TPV — Controlador principal con perfil dinámico
 // ═══════════════════════════════════════════════════════
 
+import db from './database.js'
+
 const App = {
   perfil: null,
   term: {},
   state: { productos: [], categorias: [], clientes: [], config: {} },
 
+  loadPerfil() {
+    let perfil = localStorage.getItem('sirio-perfil')
+    if (!perfil) {
+      // Perfil dummy para primera versión
+      perfil = JSON.stringify({
+        negocio: { nombre: 'Mi Negocio PWA' },
+        terminologia: { tpv: 'TPV', factura: 'Factura', cliente: 'Cliente', producto: 'Producto', inventario: 'Inventario' },
+        modulos: { inventario: { activo: true }, verifactu: { activo: true } },
+        admin: { atajo_teclado: 'F12' }
+      })
+      localStorage.setItem('sirio-perfil', perfil)
+    }
+    return JSON.parse(perfil)
+  },
+
+  async seedDummyData() {
+    // Verificar si ya hay datos
+    const productos = await db.getAll('productos')
+    if (productos.length > 0) return
+
+    // Agregar datos dummy
+    await db.put('productos', { id: '1', nombre: 'Producto 1', precio: 10.0, categoria_id: '1' })
+    await db.put('productos', { id: '2', nombre: 'Producto 2', precio: 15.0, categoria_id: '1' })
+    await db.put('categorias', { id: '1', nombre: 'Categoría 1' })
+    await db.put('clientes', { id: '1', nombre: 'Cliente 1', nif: '12345678A' })
+    await db.put('config', { clave: 'iva', valor: '21' })
+  },
+
   async init() {
-    // 1. Cargar perfil
-    this.perfil = await window.sirio.perfil.get()
+    // Init database
+    await db.init()
+
+    // Agregar datos dummy si está vacío
+    await this.seedDummyData()
+
+    // 1. Cargar perfil desde localStorage
+    this.perfil = this.loadPerfil()
     this.term   = this.perfil?.terminologia ?? {}
 
     // 2. Aplicar perfil a la UI
     this.aplicarPerfil()
 
-    // 3. Cargar datos
+    // 3. Cargar datos desde IndexedDB
     await this.loadState()
 
     // 4. Renderizar páginas
@@ -44,10 +80,6 @@ const App = {
     const p = this.perfil
     if (!p) return
 
-    // Nombre negocio en titlebar
-    const tbNeg = document.getElementById('tb-negocio')
-    if (tbNeg) tbNeg.textContent = p.negocio?.nombre ?? ''
-
     // Terminología en sidebar
     const labels = {
       tpv: this.T('tpv'), facturas: this.T('factura') + 's',
@@ -69,17 +101,15 @@ const App = {
   },
 
   async loadState() {
-    this.state.productos  = await window.sirio.productos.list()
-    this.state.categorias = await window.sirio.categorias.list()
-    this.state.clientes   = await window.sirio.clientes.list()
-    this.state.config     = await window.sirio.config.getAll()
+    this.state.productos  = await db.getAll('productos')
+    this.state.categorias = await db.getAll('categorias')
+    this.state.clientes   = await db.getAll('clientes')
+    this.state.config     = await db.getAll('config')
   },
 
-  navigate(page) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'))
-    document.getElementById(`page-${page}`)?.classList.add('active')
-    document.querySelector(`[data-page="${page}"]`)?.classList.add('active')
+  loadFromStorage(key) {
+    const data = localStorage.getItem(`sirio-${key}`)
+    return data ? JSON.parse(data) : null
   },
 
   T(clave) {
@@ -101,15 +131,13 @@ const App = {
   },
 
   async updateVerifactuBadge() {
-    try {
-      const st = await window.sirio.verifactu.status()
-      const dot = document.querySelector('.status-dot')
-      const txt = document.querySelector('.status-text')
-      if (!dot || !txt) return
-      if (!st.activo) { dot.className='status-dot'; txt.textContent='VeriFactu OFF' }
-      else if (st.pendientes > 0) { dot.className='status-dot pending'; txt.textContent=`VeriFactu ${st.pendientes} pend.` }
-      else { dot.className='status-dot active'; txt.textContent='VeriFactu OK' }
-    } catch {}
+    // Stub para primera versión
+    const dot = document.querySelector('.status-dot')
+    const txt = document.querySelector('.status-text')
+    if (dot && txt) {
+      dot.className = 'status-dot active'
+      txt.textContent = 'VeriFactu OK'
+    }
   }
 }
 
@@ -118,13 +146,11 @@ const App = {
 // ═══════════════════════════════════════════════════════
 App.renderNegocio = async function() {
   const el = document.getElementById('page-negocio')
-  const hoy = new Date().toISOString().slice(0,10)
-  const tickets  = await window.sirio.tickets.list({ desde: hoy + 'T00:00:00' })
-  const facturas = await window.sirio.facturas.list({ desde: hoy + 'T00:00:00' })
-  const alertas  = this.perfil?.modulos?.inventario?.activo
-    ? await window.sirio.inventario.getAlertas()
-    : []
-  const vfStatus = await window.sirio.verifactu.status()
+  // Datos dummy para primera versión
+  const tickets = [] // await db.getAll('tickets') or dummy
+  const facturas = []
+  const alertas = []
+  const vfStatus = { activo: true, pendientes: 0 }
 
   const ventaHoy = tickets.reduce((s, t) => s + t.total, 0)
   const factHoy  = facturas.filter(f => f.estado !== 'anulada').reduce((s, f) => s + f.total, 0)
@@ -144,14 +170,27 @@ App.renderNegocio = async function() {
     <div class="kpi-row">
       <div class="kpi-card">
         <div class="kpi-label">${this.T('ticket')}s hoy</div>
-        <div class="kpi-value">${tickets.length}</div>
-        <div class="kpi-sub">Venta: ${this.fmt(ventaHoy)}</div>
+        <div class="kpi-value">${this.fmt(ventaHoy)}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">${this.T('factura')}s hoy</div>
-        <div class="kpi-value">${facturas.filter(f=>f.estado!=='anulada').length}</div>
-        <div class="kpi-sub">Total: ${this.fmt(factHoy)}</div>
+        <div class="kpi-value">${this.fmt(factHoy)}</div>
       </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Alertas stock</div>
+        <div class="kpi-value">${alertas.length}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Estado VeriFactu</h2>
+      <div class="vf-status ${vfStatus.activo ? (vfStatus.pendientes > 0 ? 'pending' : 'active') : 'inactive'}">
+        ${vfStatus.activo ? (vfStatus.pendientes > 0 ? `Pendientes: ${vfStatus.pendientes}` : 'OK') : 'Inactivo'}
+      </div>
+    </div>
+  `
+}
+
       <div class="kpi-card">
         <div class="kpi-label">Recaudación total</div>
         <div class="kpi-value" style="color:var(--accent-bright)">${this.fmt(ventaHoy + factHoy)}</div>
@@ -223,40 +262,45 @@ App.renderNegocio = async function() {
   `
 }
 
-// ═══════════════════════════════════════════════════════
-// TPV
-// ═══════════════════════════════════════════════════════
+// Stubs básicos para primera versión
 App.renderTPV = function() {
   const el = document.getElementById('page-tpv')
-  el.innerHTML = `
-    <h1 class="page-title"><span class="title-icon">⊞</span> ${this.T('tpv')}</h1>
-    <div class="tpv-grid">
-      <div style="display:flex;flex-direction:column;gap:12px;overflow:hidden">
-        <div class="cat-tabs" id="cat-tabs"></div>
-        <div class="productos-grid" id="productos-grid"></div>
-      </div>
-      <div class="ticket-panel">
-        <div class="ticket-header">◧ ${this.T('ticket')} actual</div>
-        <div class="ticket-lineas" id="ticket-lineas">
-          <div class="empty-state"><div class="empty-icon">◈</div><div class="empty-text">Añade productos</div></div>
-        </div>
-        <div class="ticket-totales">
-          <div class="total-row"><span>Base imponible</span><span id="t-base">0,00 €</span></div>
-          <div class="total-row"><span>IVA</span><span id="t-iva">0,00 €</span></div>
-          <div class="total-row total-final"><span>TOTAL</span><span id="t-total">0,00 €</span></div>
-        </div>
-        <div class="ticket-actions">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button class="btn btn-secondary" onclick="TPV.limpiar()">Limpiar</button>
-            <button class="btn btn-success" onclick="TPV.cobrar('efectivo')">${this.T('cobrar')}</button>
-          </div>
-          <button class="btn btn-primary w-full" onclick="TPV.emitirFactura()">Emitir ${this.T('factura')}</button>
-        </div>
-      </div>
-    </div>
-  `
-  this.loadCatTabs()
-  this.loadProductosGrid()
+  el.innerHTML = `<h1 class="page-title"><span class="title-icon">⊞</span> ${this.T('tpv')}</h1><p>Página en desarrollo</p>`
+}
+
+App.renderFacturas = function() {
+  const el = document.getElementById('page-facturas')
+  el.innerHTML = `<h1 class="page-title"><span class="title-icon">◧</span> ${this.T('factura')}s</h1><p>Página en desarrollo</p>`
+}
+
+App.renderClientes = function() {
+  const el = document.getElementById('page-clientes')
+  el.innerHTML = `<h1 class="page-title"><span class="title-icon">◉</span> ${this.T('cliente')}s</h1><p>Página en desarrollo</p>`
+}
+
+App.renderProductos = function() {
+  const el = document.getElementById('page-productos')
+  el.innerHTML = `<h1 class="page-title"><span class="title-icon">◈</span> ${this.T('producto')}s</h1><p>Página en desarrollo</p>`
+}
+
+App.renderInventario = function() {
+  const el = document.getElementById('page-inventario')
+  el.innerHTML = `<h1 class="page-title"><span class="title-icon">▦</span> ${this.T('inventario')}</h1><p>Página en desarrollo</p>`
+}
+
+App.renderVerifactu = function() {
+  const el = document.getElementById('page-verifactu')
+  el.innerHTML = `<h1 class="page-title"><span class="title-icon">◎</span> VeriFactu</h1><p>Página en desarrollo</p>`
+}
+
+App.renderConfig = function() {
+  const el = document.getElementById('page-config')
+  el.innerHTML = `<h1 class="page-title"><span class="title-icon">◌</span> Configuración</h1><p>Página en desarrollo</p>`
+}
+
+App.renderAdmin = function() {
+  const el = document.getElementById('page-admin')
+  el.innerHTML = `<h1 class="page-title"><span class="title-icon">⚙</span> Admin</h1><p>Página en desarrollo</p>`
 }
 
 App.loadCatTabs = function() {

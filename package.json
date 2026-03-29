@@ -2,73 +2,22 @@
   "name": "sirio",
   "version": "1.0.0",
   "description": "Sirio - Gestor TPV con VeriFactu para cumplimiento AEAT",
-  "main": "src/main/main.js",
+  "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"electron .\"",
-    "build": "vite build && electron-builder",
-    "build:vite": "vite build",
-    "build:electron": "electron-builder",
+    "dev": "vite",
+    "build": "vite build",
     "preview": "vite preview",
     "install-service": "node scripts/install-service.js",
     "uninstall-service": "node scripts/uninstall-service.js"
   },
   "dependencies": {
-    "better-sqlite3": "^9.4.3",
-    "electron-squirrel-startup": "^1.0.0",
-    "node-windows": "^1.0.0-beta.8",
-    "xml2js": "^0.6.2",
-    "node-cron": "^3.0.3",
     "axios": "^1.6.7",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
     "vite": "^5.0.0",
-    "electron": "^29.0.0",
-    "electron-builder": "^24.9.1",
+    "vite-plugin-pwa": "^0.19.0",
     "concurrently": "^8.2.2",
     "wait-on": "^7.2.0"
-  },
-  "build": {
-    "appId": "com.sirio.tpv",
-    "productName": "Sirio TPV",
-    "copyright": "Copyright © 2025 Sirio",
-    "directories": {
-      "output": "dist-electron"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        }
-      ],
-      "icon": "resources/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "installerIcon": "resources/icon.ico",
-      "uninstallerIcon": "resources/icon.ico",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Sirio TPV",
-      "runAfterFinish": true,
-      "include": "scripts/installer.nsh"
-    },
-    "extraResources": [
-      {
-        "from": "resources/",
-        "to": "resources/",
-        "filter": ["**/*"]
-      }
-    ],
-    "files": [
-      "dist/**/*",
-      "src/main/**/*",
-      "scripts/**/*",
-      "resources/**/*",
-      "package.json"
-    ]
   }
 }

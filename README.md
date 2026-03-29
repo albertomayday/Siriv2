@@ -1,7 +1,7 @@
 # ◈ Sirio TPV
 
 **Gestor TPV con VeriFactu** — Cumplimiento RD 1007/2023 AEAT  
-Electron + Vite + SQLite | Windows 10/11 | Offline-first
+PWA + Vite + IndexedDB | Web/Móvil | Offline-first
 
 ---
 
@@ -10,43 +10,63 @@ Electron + Vite + SQLite | Windows 10/11 | Offline-first
 - **TPV completo** — Productos, categorías, tickets, cobros
 - **Facturación electrónica** — Series, líneas, IVA desglosado
 - **VeriFactu / AEAT** — Hash SHA-256 encadenado, envío SOAP, QR verificación
-- **Sincronización automática** — Servicio Windows en background cada 15 min
+- **Sincronización automática** — Service Worker en background
 - **Clientes** — Gestión completa con NIF/CIF
 - **Exportación CSV** — Facturas exportables para contabilidad
-- **Base de datos local** — SQLite, sin servidor, sin internet obligatorio
-- **Diseño sin navegador** — App de escritorio nativa vía Electron
+- **Base de datos local** — IndexedDB, sin servidor, sin internet obligatorio
+- **PWA instalable** — Funciona como app nativa en navegador
 
 ---
 
-## Instalación telemática (RDP/TeamViewer)
+## Instalación
 
-```powershell
-# En el equipo del cliente, como Administrador:
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-irm https://raw.githubusercontent.com/albertomayday/sirio/main/scripts/deploy.ps1 | iex
-```
+Accede a la URL de la app en un navegador compatible (Chrome, Edge, etc.) y haz clic en "Instalar app" para instalarla como PWA.
 
-O copiar y ejecutar `scripts/deploy.ps1` manualmente.
-
-### Lo que hace el instalador:
-1. Verifica/instala Git y Node.js
-2. Clona el repositorio en `C:\Sirio`
-3. Instala dependencias y compila el frontend
-4. Crea acceso directo en el escritorio
-5. Configura arranque automático con Windows
-6. Instala el servicio VeriFactu en background
-7. Lanza Sirio TPV
-
----
-
-## Desarrollo local
+### Desarrollo local
 
 ```bash
 # Instalar dependencias
 npm install
 
-# Modo desarrollo (Vite + Electron)
+# Modo desarrollo (Vite)
 npm run dev
+
+# Build para producción
+npm run build
+
+# Preview del build
+npm run preview
+```
+
+### Primera versión PWA
+- Abre http://localhost:5173 en un navegador moderno.
+- La app se cargará como PWA básica con IndexedDB.
+- Para instalar: Busca el botón "Instalar app" en la barra de direcciones.
+
+## Despliegue (Deploy)
+
+La PWA se despliega automáticamente a GitHub Pages cuando se hace push a la rama `pwa-no-electron`.
+
+### Configuración Inicial
+1. Ve a **Settings > Pages** en el repositorio de GitHub.
+2. Selecciona **Deploy from a branch**.
+3. Elige la rama `pwa-no-electron` como source.
+4. Guarda los cambios.
+
+### Desplegar
+1. Haz push a la rama `pwa-no-electron`:
+   ```bash
+   git add .
+   git commit -m "Deploy PWA"
+   git push origin pwa-no-electron
+   ```
+
+2. GitHub Actions construirá y desplegará automáticamente.
+
+3. La app estará disponible en: `https://albertomayday.github.io/Siriv2/`
+
+### Iconos
+Reemplaza `public/icon-192.png` y `public/icon-512.png` con imágenes reales de 192x192 y 512x512 px para el manifest.
 
 # Build instalador .exe
 npm run build

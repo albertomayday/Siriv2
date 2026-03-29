@@ -27,9 +27,9 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git checkout pwa-no-electron
           rm -rf index.html styles main.css app.js database.js manifest.json sw.js favicon.ico icon-192.png icon-512.png
-          git show origin/main:tpv-inventario.html > index.html
+          cp -r dist/* .
+          rm -rf dist
           git add .
-          git commit -m "Deploy PWA with standalone HTML from configurator" || echo "No changes to commit"
+          git commit -m "Deploy PWA to branch" || echo "No changes to commit"
           git push origin pwa-no-electron

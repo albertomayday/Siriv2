@@ -163,51 +163,37 @@ App.renderNegocio = async function() {
   const fecha    = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' })
 
   el.innerHTML = `
-    <div class="flex items-center justify-between">
+    <div class='flex items-center justify-between'>
       <div>
-        <h1 class="page-title"><span class="title-icon">◉</span> ${this.escH(nombre)}</h1>
-        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:4px;text-transform:capitalize">${fecha} · ${hora}</div>
+        <h1 class='page-title'><span class='title-icon'>◉</span> ${this.escH(nombre)}</h1>
+        <div style='font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:4px;text-transform:capitalize'>${fecha} · ${hora}</div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="App.renderNegocio()">↻ Actualizar</button>
+      <button class='btn btn-secondary btn-sm' onclick='App.renderNegocio()'>↻ Actualizar</button>
     </div>
 
-    <div class="kpi-row">
-      <div class="kpi-card">
-        <div class="kpi-label">${this.T('ticket')}s hoy</div>
-        <div class="kpi-value">${this.fmt(ventaHoy)}</div>
+    <div class='kpi-row'>
+      <div class='kpi-card'>
+        <div class='kpi-label'>${this.T('ticket')}s hoy</div>
+        <div class='kpi-value'>${this.fmt(ventaHoy)}</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">${this.T('factura')}s hoy</div>
-        <div class="kpi-value">${this.fmt(factHoy)}</div>
+      <div class='kpi-card'>
+        <div class='kpi-label'>${this.T('factura')}s hoy</div>
+        <div class='kpi-value'>${this.fmt(factHoy)}</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Alertas stock</div>
-        <div class="kpi-value">${alertas.length}</div>
+      <div class='kpi-card'>
+        <div class='kpi-label'>Alertas stock</div>
+        <div class='kpi-value'>${alertas.length}</div>
       </div>
     </div>
 
-    <div class="section">
-      <h2 class="section-title">Estado VeriFactu</h2>
-      <div class="vf-status ${vfStatus.activo ? (vfStatus.pendientes > 0 ? 'pending' : 'active') : 'inactive'}">
+    <div class='section'>
+      <h2 class='section-title'>Estado VeriFactu</h2>
+      <div class='vf-status ${vfStatus.activo ? (vfStatus.pendientes > 0 ? 'pending' : 'active') : 'inactive'}'>
         ${vfStatus.activo ? (vfStatus.pendientes > 0 ? `Pendientes: ${vfStatus.pendientes}` : 'OK') : 'Inactivo'}
       </div>
     </div>
   `
 }
-
-      <div class="kpi-card">
-        <div class="kpi-label">Recaudación total</div>
-        <div class="kpi-value" style="color:var(--accent-bright)">${this.fmt(ventaHoy + factHoy)}</div>
-        <div class="kpi-sub">TPV + ${this.T('factura')}s</div>
-      </div>
-      ${this.perfil?.modulos?.inventario?.activo ? `
-      <div class="kpi-card" style="cursor:pointer" onclick="App.navigate('inventario')">
-        <div class="kpi-label">Alertas stock</div>
-        <div class="kpi-value" style="color:${alertas.length > 0 ? 'var(--amber)' : 'var(--green)'}">${alertas.length}</div>
-        <div class="kpi-sub">${alertas.length > 0 ? 'Productos bajo mínimo' : 'Stock OK'}</div>
-      </div>` : ''}
-      ${this.perfil?.modulos?.verifactu?.activo ? `
-      <div class="kpi-card" style="cursor:pointer" onclick="App.navigate('verifactu')">
         <div class="kpi-label">VeriFactu</div>
         <div class="kpi-value" style="font-size:16px;color:${vfStatus.pendientes > 0 ? 'var(--amber)' : 'var(--green)'}">
           ${vfStatus.activo ? (vfStatus.pendientes > 0 ? `${vfStatus.pendientes} pend.` : 'OK') : 'OFF'}
@@ -554,27 +540,27 @@ App.renderProductos = async function() {
   const categorias = await db.getAll('categorias')
 
   el.innerHTML = `
-    <div class="flex items-center justify-between">
-      <h1 class="page-title"><span class="title-icon">◈</span> ${this.T('producto')}s</h1>
-      <button class="btn btn-primary btn-sm" onclick="App.showProductoForm()">+ Nuevo ${this.T('producto')}</button>
+    <div class='flex items-center justify-between'>
+      <h1 class='page-title'><span class='title-icon'>◈</span> ${this.T('producto')}s</h1>
+      <button class='btn btn-primary btn-sm' onclick='App.showProductoForm()'>+ Nuevo ${this.T('producto')}</button>
     </div>
 
-    <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0">
-      <div style="flex:1;overflow:auto">
-        <div class="table-wrap">
+    <div class='card' style='flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0'>
+      <div style='flex:1;overflow:auto'>
+        <div class='table-wrap'>
           <table>
             <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acciones</th></tr></thead>
             <tbody>
               ${productos.length === 0
-                ? `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted)">Sin ${this.T('producto')}s</td></tr>`
+                ? `<tr><td colspan='4' style='text-align:center;padding:40px;color:var(--text-muted)'>Sin ${this.T('producto')}s</td></tr>`
                 : productos.map(p => `
                   <tr>
                     <td>${this.escH(p.nombre)}</td>
                     <td>${categorias.find(c => c.id === p.categoria_id)?.nombre || '-'}</td>
-                    <td class="text-mono">${this.fmt(p.precio)}</td>
+                    <td class='text-mono'>${this.fmt(p.precio)}</td>
                     <td>
-                      <button class="btn btn-secondary btn-sm" onclick="App.editProducto('${p.id}')">Editar</button>
-                      <button class="btn btn-danger btn-sm" onclick="App.deleteProducto('${p.id}')">Eliminar</button>
+                      <button class='btn btn-secondary btn-sm' onclick='App.editProducto("${p.id}")'>Editar</button>
+                      <button class='btn btn-danger btn-sm' onclick='App.deleteProducto("${p.id}")'>Eliminar</button>
                     </td>
                   </tr>`).join('')
               }
@@ -589,31 +575,31 @@ App.renderProductos = async function() {
 App.showProductoForm = function(producto = null) {
   const isEdit = !!producto
   const form = `
-    <div class="modal-overlay" onclick="this.remove()">
-      <div class="modal" onclick="event.stopPropagation()">
-        <div class="modal-header">
+    <div class='modal-overlay' onclick='this.remove()'>
+      <div class='modal' onclick='event.stopPropagation()'>
+        <div class='modal-header'>
           <h3>${isEdit ? 'Editar' : 'Nuevo'} ${this.T('producto')}</h3>
-          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+          <button class='modal-close' onclick='this.closest(".modal-overlay").remove()'>×</button>
         </div>
-        <form onsubmit="App.saveProducto(event, '${producto?.id || ''}')">
-          <div class="form-group">
+        <form onsubmit='App.saveProducto(event, "${producto?.id || ''}")'>
+          <div class='form-group'>
             <label>Nombre</label>
-            <input type="text" name="nombre" value="${producto?.nombre || ''}" required>
+            <input type='text' name='nombre' value='${producto?.nombre || ''}' required>
           </div>
-          <div class="form-group">
+          <div class='form-group'>
             <label>Precio</label>
-            <input type="number" step="0.01" name="precio" value="${producto?.precio || ''}" required>
+            <input type='number' step='0.01' name='precio' value='${producto?.precio || ''}' required>
           </div>
-          <div class="form-group">
+          <div class='form-group'>
             <label>Categoría</label>
-            <select name="categoria_id">
-              <option value="">Sin categoría</option>
-              ${(await db.getAll('categorias')).map(c => `<option value="${c.id}" ${producto?.categoria_id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+            <select name='categoria_id'>
+              <option value=''>Sin categoría</option>
+              ${(await db.getAll('categorias')).map(c => `<option value='${c.id}' ${producto?.categoria_id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
             </select>
           </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar</button>
+          <div class='modal-actions'>
+            <button type='button' class='btn btn-secondary' onclick='this.closest(".modal-overlay").remove()'>Cancelar</button>
+            <button type='submit' class='btn btn-primary'>Guardar</button>
           </div>
         </form>
       </div>

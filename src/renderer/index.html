@@ -61,6 +61,10 @@
     </main>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <script type="module">
+    import { App } from './app.js'
+    window.App = App
+    App.init()
+  </script>
 </body>
 </html>

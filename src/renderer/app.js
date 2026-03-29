@@ -383,6 +383,13 @@ App.emitirFactura = function() {
   alert('Factura emitida! (Funcionalidad básica)')
 }
 
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+  App.init()
+})
+
+export { App }
+
 App.renderFacturas = async function() {
   const el = document.getElementById('page-facturas')
   // Dummy facturas

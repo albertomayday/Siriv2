@@ -193,6 +193,7 @@ App.renderNegocio = async function() {
       </div>
     </div>
   `
+  return `
 }
         <div class="kpi-label">VeriFactu</div>
         <div class="kpi-value" style="font-size:16px;color:${vfStatus.pendientes > 0 ? 'var(--amber)' : 'var(--green)'}">

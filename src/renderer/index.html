@@ -33,9 +33,13 @@
         <span class="nav-icon">◈</span>
         <span class="nav-label" id="lbl-productos">Productos</span>
       </button>
-      <button class="nav-btn" data-page="inventario" onclick="App.navigate('inventario')" id="nav-inventario" style="display:none">
+      <button class="nav-btn" data-page="inventario" onclick="App.navigate('inventario')" id="nav-inventario">
         <span class="nav-icon">▦</span>
         <span class="nav-label" id="lbl-inventario">Stock</span>
+      </button>
+      <button class="nav-btn" data-page="caja"       onclick="App.navigate('caja')"       id="nav-caja">
+        <span class="nav-icon">⬣</span>
+        <span class="nav-label">Caja</span>
       </button>
       <button class="nav-btn" data-page="verifactu" onclick="App.navigate('verifactu')" id="nav-verifactu" style="display:none">
         <span class="nav-icon">◎</span>
@@ -55,6 +59,7 @@
       <div id="page-clientes"   class="page"></div>
       <div id="page-productos"  class="page"></div>
       <div id="page-inventario" class="page"></div>
+      <div id="page-caja"       class="page"></div>
       <div id="page-verifactu"  class="page"></div>
       <div id="page-config"     class="page"></div>
       <div id="page-admin"      class="page"></div>

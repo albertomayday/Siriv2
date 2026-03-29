@@ -97,7 +97,7 @@ const App = {
 
     // Mostrar/ocultar módulos en sidebar
     const modulos = p.modulos ?? {}
-    const navMap = { inventario:'nav-inventario', verifactu:'nav-verifactu' }
+    const navMap = { inventario:'nav-inventario', verifactu:'nav-verifactu', caja:'nav-caja' }
     Object.entries(navMap).forEach(([mod, navId]) => {
       const el = document.getElementById(navId)
       if (el) el.style.display = modulos[mod]?.activo ? 'flex' : 'none'
@@ -556,15 +556,17 @@ App.renderProductos = async function() {
       <div style='flex:1;overflow:auto'>
         <div class='table-wrap'>
           <table>
-            <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Icono</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
             <tbody>
               ${productos.length === 0
-                ? `<tr><td colspan='4' style='text-align:center;padding:40px;color:var(--text-muted)'>Sin ${this.T('producto')}s</td></tr>`
+                ? `<tr><td colspan='6' style='text-align:center;padding:40px;color:var(--text-muted)'>Sin ${this.T('producto')}s</td></tr>`
                 : productos.map(p => `
                   <tr>
+                    <td>${p.icono || '📦'}</td>
                     <td>${this.escH(p.nombre)}</td>
                     <td>${categorias.find(c => c.id === p.categoria_id)?.nombre || '-'}</td>
                     <td class='text-mono'>${this.fmt(p.precio)}</td>
+                    <td class='text-mono'>${p.stock || 0} uds</td>
                     <td>
                       <button class='btn btn-secondary btn-sm' onclick='App.editProducto("${p.id}")'>Editar</button>
                       <button class='btn btn-danger btn-sm' onclick='App.deleteProducto("${p.id}")'>Eliminar</button>
@@ -589,20 +591,53 @@ App.showProductoForm = function(producto = null) {
           <button class='modal-close' onclick='this.closest(".modal-overlay").remove()'>×</button>
         </div>
         <form onsubmit='App.saveProducto(event, "${producto?.id || ''}")'>
-          <div class='form-group'>
-            <label>Nombre</label>
-            <input type='text' name='nombre' value='${producto?.nombre || ''}' required>
+          <div class='form-row'>
+            <div class='form-group'>
+              <label>Icono / Emoji</label>
+              <input type='text' name='icono' value='${producto?.icono || '📦'}' maxlength='4'>
+            </div>
+            <div class='form-group'>
+              <label>Nombre</label>
+              <input type='text' name='nombre' value='${producto?.nombre || ''}' required>
+            </div>
           </div>
-          <div class='form-group'>
-            <label>Precio</label>
-            <input type='number' step='0.01' name='precio' value='${producto?.precio || ''}' required>
+          <div class='form-row'>
+            <div class='form-group'>
+              <label>Precio venta (€)</label>
+              <input type='number' step='0.01' name='precio' value='${producto?.precio || ''}' required>
+            </div>
+            <div class='form-group'>
+              <label>Precio coste (€)</label>
+              <input type='number' step='0.01' name='precio_costo' value='${producto?.precio_costo || ''}'>
+            </div>
           </div>
-          <div class='form-group'>
-            <label>Categoría</label>
-            <select name='categoria_id'>
-              <option value=''>Sin categoría</option>
-              ${(await db.getAll('categorias')).map(c => `<option value='${c.id}' ${producto?.categoria_id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
-            </select>
+          <div class='form-row'>
+            <div class='form-group'>
+              <label>Categoría</label>
+              <select name='categoria_id'>
+                <option value=''>Sin categoría</option>
+                ${(this.state.categorias || []).map(c => `<option value='${c.id}' ${producto?.categoria_id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+              </select>
+            </div>
+            <div class='form-group'>
+              <label>IVA %</label>
+              <select name='iva'>
+                <option value='21' ${producto?.iva == 21 ? 'selected' : ''}>21% (general)</option>
+                <option value='10' ${producto?.iva == 10 ? 'selected' : ''}>10% (reducido)</option>
+                <option value='4' ${producto?.iva == 4 ? 'selected' : ''}>4% (superreducido)</option>
+                <option value='0' ${producto?.iva == 0 ? 'selected' : ''}>0% (exento)</option>
+              </select>
+            </div>
+          </div>
+          <div class='form-row'>
+            <div class='form-group'>
+              <label>Stock actual</label>
+              <input type='number' name='stock' value='${producto?.stock || 0}' min='0'>
+            </div>
+            <div class='form-group'>
+              <label>Stock mínimo</label>
+              <input type='number' name='stock_minimo' value='${producto?.stock_minimo || 5}' min='0'>
+            </div>
           </div>
           <div class='modal-actions'>
             <button type='button' class='btn btn-secondary' onclick='this.closest(".modal-overlay").remove()'>Cancelar</button>
@@ -619,9 +654,14 @@ App.saveProducto = async function(event, id) {
   event.preventDefault()
   const form = event.target
   const data = {
+    icono: form.icono.value || '📦',
     nombre: form.nombre.value,
     precio: parseFloat(form.precio.value),
-    categoria_id: form.categoria_id.value || null
+    precio_costo: form.precio_costo.value ? parseFloat(form.precio_costo.value) : null,
+    categoria_id: form.categoria_id.value || null,
+    iva: parseInt(form.iva.value),
+    stock: parseInt(form.stock.value) || 0,
+    stock_minimo: parseInt(form.stock_minimo.value) || 5
   }
   if (id) {
     data.id = id
@@ -631,6 +671,7 @@ App.saveProducto = async function(event, id) {
   await db.put('productos', data)
   event.target.closest('.modal-overlay').remove()
   this.renderProductos()
+  this.renderInventario() // Actualizar inventario también
 }
 
 App.editProducto = async function(id) {
@@ -645,9 +686,110 @@ App.deleteProducto = async function(id) {
   }
 }
 
-App.renderInventario = function() {
+App.renderInventario = async function() {
   const el = document.getElementById('page-inventario')
-  el.innerHTML = `<h1 class="page-title"><span class="title-icon">▦</span> ${this.T('inventario')}</h1><p>Página en desarrollo</p>`
+  const productos = await db.getAll('productos')
+  const categorias = await db.getAll('categorias')
+
+  // Calcular estadísticas
+  const totalProductos = productos.length
+  const stockBajo = productos.filter(p => (p.stock || 0) <= (p.stock_minimo || 5)).length
+  const agotados = productos.filter(p => (p.stock || 0) === 0).length
+  const valorTotal = productos.reduce((s, p) => s + ((p.stock || 0) * (p.precio_costo || p.precio)), 0)
+
+  el.innerHTML = `
+    <div class="flex items-center justify-between">
+      <h1 class="page-title"><span class="title-icon">▦</span> ${this.T('inventario')}</h1>
+      <div class="flex gap-8">
+        <button class="btn btn-secondary btn-sm" onclick="App.exportarInventario()">Exportar CSV</button>
+        <button class="btn btn-secondary btn-sm" onclick="App.renderInventario()">↻ Actualizar</button>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Total productos</div>
+        <div class="kpi-value">${totalProductos}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Stock bajo</div>
+        <div class="kpi-value" style="color: var(--amber)">${stockBajo}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Agotados</div>
+        <div class="kpi-value" style="color: var(--red)">${agotados}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Valor inventario</div>
+        <div class="kpi-value">${this.fmt(valorTotal)}</div>
+      </div>
+    </div>
+
+    <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0">
+      <div class="card-header" style="padding:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;gap:12px;align-items:center">
+          <input type="text" placeholder="Buscar productos..." id="inv-search" oninput="App.filtrarInventario()" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:4px">
+          <button class="btn btn-primary btn-sm" onclick="App.showProductoForm()">+ Nuevo producto</button>
+        </div>
+      </div>
+      <div style="flex:1;overflow:auto">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Icono</th>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>P. Venta</th>
+                <th>P. Coste</th>
+                <th>Margen</th>
+                <th>Stock</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="inv-table-body">
+              ${productos.map(p => {
+                const stock = p.stock || 0
+                const minStock = p.stock_minimo || 5
+                const stockCls = stock === 0 ? 'stock-out' : stock <= minStock ? 'stock-low' : 'stock-ok'
+                const stockTxt = stock === 0 ? 'Agotado' : stock <= minStock ? `⚠ ${stock}` : `${stock} uds`
+                const margen = p.precio_costo && p.precio ? ((p.precio - p.precio_costo) / p.precio * 100).toFixed(1) : '—'
+                const cat = categorias.find(c => c.id === p.categoria_id)?.nombre || '—'
+                return `
+                  <tr>
+                    <td style="font-size:22px">${p.icono || '📦'}</td>
+                    <td><span class="td-name">${this.escH(p.nombre)}</span></td>
+                    <td><span class="td-cat">${this.escH(cat)}</span></td>
+                    <td class="text-mono">${this.fmt(p.precio)}</td>
+                    <td class="text-mono">${p.precio_costo ? this.fmt(p.precio_costo) : '—'}</td>
+                    <td class="text-mono" style="color: ${margen !== '—' && parseFloat(margen) > 40 ? 'var(--green)' : margen !== '—' && parseFloat(margen) > 20 ? 'var(--amber)' : 'var(--red)'}">${margen !== '—' ? margen + '%' : '—'}</td>
+                    <td><span class="stock-badge ${stockCls}">${stockTxt}</span></td>
+                    <td>
+                      <button class="btn btn-secondary btn-sm" onclick="App.editProducto('${p.id}')">Editar</button>
+                      <button class="btn btn-danger btn-sm" onclick="App.deleteProducto('${p.id}')">Eliminar</button>
+                    </td>
+                  </tr>
+                `
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+App.filtrarInventario = function() {
+  const query = document.getElementById('inv-search').value.toLowerCase()
+  const rows = document.querySelectorAll('#inv-table-body tr')
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase()
+    row.style.display = text.includes(query) ? '' : 'none'
+  })
+}
+
+App.exportarInventario = function() {
+  alert('Exportar inventario CSV (Funcionalidad básica)')
 }
 
 App.renderVerifactu = function() {
@@ -663,6 +805,77 @@ App.renderConfig = function() {
 App.renderAdmin = function() {
   const el = document.getElementById('page-admin')
   el.innerHTML = `<h1 class="page-title"><span class="title-icon">⚙</span> Admin</h1><p>Página en desarrollo</p>`
+}
+
+App.renderCaja = async function() {
+  const el = document.getElementById('page-caja')
+  // Dummy ventas para primera versión
+  const ventas = [
+    { id: 1, items: [{ name: 'Producto 1', qty: 2, price: 10 }], total: 20, method: 'cash', time: '10:30' },
+    { id: 2, items: [{ name: 'Producto 2', qty: 1, price: 15 }], total: 15, method: 'card', time: '11:00' }
+  ]
+  const total = ventas.reduce((s, v) => s + v.total, 0)
+  const cash = ventas.filter(v => v.method === 'cash').reduce((s, v) => s + v.total, 0)
+  const card = ventas.filter(v => v.method === 'card').reduce((s, v) => s + v.total, 0)
+  const avgTicket = ventas.length ? total / ventas.length : 0
+  const units = ventas.reduce((s, v) => s + v.items.reduce((a, i) => a + i.qty, 0), 0)
+
+  el.innerHTML = `
+    <div class="flex items-center justify-between">
+      <h1 class="page-title"><span class="title-icon">⬣</span> Caja</h1>
+      <button class="btn btn-secondary btn-sm" onclick="App.cierreCaja()">⏹ Cierre de Caja</button>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Total vendido</div><div class="kpi-value accent">${this.fmt(total)}</div><div class="kpi-sub">${ventas.length} transacciones</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ticket medio</div><div class="kpi-value">${this.fmt(avgTicket)}</div><div class="kpi-sub">por venta</div></div>
+      <div class="kpi-card"><div class="kpi-label">Unidades vendidas</div><div class="kpi-value">${units}</div><div class="kpi-sub">hoy</div></div>
+      <div class="kpi-card"><div class="kpi-label">Efectivo</div><div class="kpi-value green">${this.fmt(cash)}</div><div class="kpi-sub">${ventas.filter(v=>v.method==='cash').length} ventas</div></div>
+      <div class="kpi-card"><div class="kpi-label">Tarjeta</div><div class="kpi-value blue">${this.fmt(card)}</div><div class="kpi-sub">${ventas.filter(v=>v.method==='card').length} ventas</div></div>
+    </div>
+
+    <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0">
+      <div class="card-header" style="padding:16px;border-bottom:1px solid var(--border)">
+        <div>Historial de Ventas</div>
+      </div>
+      <div style="flex:1;overflow:auto;padding:16px">
+        ${ventas.length
+          ? ventas.map(v => `
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span>${v.time} · ${v.items.length} artículo${v.items.length !== 1 ? 's' : ''}</span>
+                <span>${v.method === 'cash' ? '💶 Efect.' : '💳 Tarj.'}</span>
+                <span class="text-mono">${this.fmt(v.total)}</span>
+              </div>
+            `).join('')
+          : '<div style="text-align:center;color:var(--text-muted);padding:40px">Sin ventas registradas hoy</div>'
+        }
+      </div>
+    </div>
+
+    <div class="card" style="padding:16px;margin-top:16px">
+      <h3 style="margin-bottom:12px">Desglose</h3>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between">
+          <span>💶 Efectivo</span>
+          <span class="text-mono green">${this.fmt(cash)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span>💳 Tarjeta</span>
+          <span class="text-mono blue">${this.fmt(card)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:8px;margin-top:8px">
+          <span style="font-weight:600">TOTAL</span>
+          <span class="text-mono accent">${this.fmt(total)}</span>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+App.cierreCaja = function() {
+  if (confirm('¿Realizar cierre de caja? Se resetearán las ventas del día.')) {
+    alert('Cierre de caja realizado (Funcionalidad básica)')
+  }
 }
 
 App.loadCatTabs = function() {

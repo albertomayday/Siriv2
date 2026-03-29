@@ -195,15 +195,9 @@ App.renderNegocio = async function() {
   `
   return `
 }
-        <div class="kpi-label">VeriFactu</div>
-        <div class="kpi-value" style="font-size:16px;color:${vfStatus.pendientes > 0 ? 'var(--amber)' : 'var(--green)'}">
-          ${vfStatus.activo ? (vfStatus.pendientes > 0 ? `${vfStatus.pendientes} pend.` : 'OK') : 'OFF'}
-        </div>
-        <div class="kpi-sub">Modo ${vfStatus.modo ?? '—'}</div>
-      </div>` : ''}
-    </div>
-
-    <div class="dash-grid">
+return `
+  undefined
+`
       <div class="card">
         <div class="card-header">
           <span class="card-title">Últimos ${this.T('ticket')}s</span>
